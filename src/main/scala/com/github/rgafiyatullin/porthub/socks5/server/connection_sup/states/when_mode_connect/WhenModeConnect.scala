@@ -22,8 +22,8 @@ object WhenModeConnect {
     val socksOperationRsCodec = SocksOperation.encoding.socksOperationRsCodec
 
     def receive(tcpUtilState: ActorStateTcpUtil.State): Receive = {
-      log.debug("Connecting to {}...", rq.inetSocketAddress)
-      IO(Tcp)(context.system).tell(Tcp.Connect(rq.inetSocketAddress), self)
+      log.info("Connecting to {}...", rq.inetSocketAddress)
+      IO(Tcp)(context.system) ! Tcp.Connect(rq.inetSocketAddress)
 
       whenConnecting(tcpUtilState)
     }
@@ -42,7 +42,7 @@ object WhenModeConnect {
         upstreamTcp ! Tcp.Register(self)
         upstreamTcp ! Tcp.Write(tcpUtilState.mapBuffer(downstreamTcp)(identity).bytes.toByteString)
 
-        val response = SocksOperation.SocksOperationRs(rq.version, 0 /* succeeded */, rq.address, rq.port)
+        val response = SocksOperation.SocksOperationRs(0 /* succeeded */, rq.address, rq.port)
         tcpUtil.write(downstreamTcp, socksOperationRsCodec, response)
 
         context become Connected(actor, downstreamTcp, upstreamTcp).receive()
@@ -52,7 +52,7 @@ object WhenModeConnect {
       case Tcp.CommandFailed(_: Tcp.Connect) =>
         log.debug("Failed to connect")
         /* I wish I could figure out a slight bit more of information why the connection attempt actually failed */
-        val response = SocksOperation.SocksOperationRs(rq.version, 5 /* connection refused */, rq.address, rq.port)
+        val response = SocksOperation.SocksOperationRs(5 /* connection refused */, rq.address, rq.port)
         tcpUtil.write(downstreamTcp, socksOperationRsCodec, response)
 
         context stop self
@@ -71,7 +71,7 @@ object WhenModeConnect {
 
     def receive(): Receive =
       handleTcpReceived() orElse
-        handleTcpClosed() orElse 
+        handleTcpClosed() orElse
         stdReceive.discard
 
     def handleTcpReceived(): Receive = {

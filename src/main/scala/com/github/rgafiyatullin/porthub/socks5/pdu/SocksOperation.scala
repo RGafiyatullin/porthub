@@ -3,7 +3,7 @@ import java.net.{InetAddress, InetSocketAddress}
 import java.nio.charset.Charset
 
 import scodec.Codec
-import shapeless.{:+:, CNil, Coproduct, Sized, nat}
+import shapeless.{:+:, CNil, Coproduct}
 
 object SocksOperation {
   private val charset = Charset.forName("utf8")
@@ -52,8 +52,10 @@ object SocksOperation {
     final case class TcpBind(inetSocketAddress: InetSocketAddress) extends Command
     final case class UdpAssoc() extends Command
   }
-  final case class SocksOperationRq(version: Byte, command: Byte, address: AddressCoproduct, port: Int) {
+  final case class SocksOperationRq(command: Byte, address: AddressCoproduct, port: Int) {
     import SocksOperationRq._
+
+    val version: Byte = 5
 
     def inetSocketAddress: InetSocketAddress =
       (address.select[Address.Type1], address.select[Address.Type3], address.select[Address.Type4]) match {
@@ -75,7 +77,7 @@ object SocksOperation {
       }
   }
 
-  final case class SocksOperationRs(version: Byte, reply: Byte, address: AddressCoproduct, port: Int)
+  final case class SocksOperationRs(reply: Byte, address: AddressCoproduct, port: Int) { val version: Byte = 5 }
 
   object encoding {
     import scodec._
@@ -93,7 +95,7 @@ object SocksOperation {
     val addrTypeCodec: Codec[AddressCoproduct] = (addrType1Codec :+: addrType3Codec :+: addrType4Codec).choice
 
     val socksOperationRqCodec = (
-        ("version" | byte) ::
+        ("version" | literals.constantByteVectorCodec(hex"05")) ::
         ("command" | byte) ::
         ("reserved" | literals.constantByteVectorCodec(hex"00")) ::
         ("address" | addrTypeCodec) ::
@@ -101,7 +103,7 @@ object SocksOperation {
       ).as[SocksOperationRq]
 
     val socksOperationRsCodec = (
-        ("version" | byte) ::
+        ("version" | literals.constantByteVectorCodec(hex"05")) ::
         ("reply" | byte) ::
         ("reserved" | literals.constantByteVectorCodec(hex"00")) ::
         ("address" | addrTypeCodec) ::

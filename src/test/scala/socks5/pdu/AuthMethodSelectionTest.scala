@@ -9,8 +9,8 @@ import scodec.bits.BitVector
 class AuthMethodSelectionTest extends FlatSpec with Matchers {
   val rqCodec = AuthMethodSelection.encoding.authMethodSelectionRqCodec
   val rsCodec = AuthMethodSelection.encoding.authMethodSelectionRsCodec
-  val requestsIn = Vector(1,2,3,4,5).map(_.toByte).permutations.map(AuthMethodSelectionRq(5, _)).toSeq
-  val responsesIn = (0 to 255).map(_.toByte).map(AuthMethodSelectionRs(5, _))
+  val requestsIn = Vector(1,2,3,4,5).map(_.toByte).permutations.map(AuthMethodSelectionRq).toSeq
+  val responsesIn = (0 to 255).map(_.toByte).map(AuthMethodSelectionRs)
 
   "Requests" should "encode and decode separately" in {
     val attemptsToDecode = requestsIn.map(rqCodec.encode(_).flatMap(rqCodec.decode))

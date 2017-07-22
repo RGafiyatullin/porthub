@@ -19,7 +19,7 @@ final case class WhenSelectingMode(actor: ConnectionSrv.ConnectionSrvActor, down
   val socksOperationRsCodec = SocksOperation.encoding.socksOperationRsCodec
 
   def handleRqCommandNotSupported(rq: SocksOperation.SocksOperationRq): Receive = {
-    val response = SocksOperationRs(rq.version, 7.toByte /* Command not supported */, rq.address, rq.port)
+    val response = SocksOperationRs(7.toByte /* Command not supported */, rq.address, rq.port)
     tcpUtil.write(downstreamTcp, socksOperationRsCodec, response)
 
     context stop self
@@ -27,7 +27,7 @@ final case class WhenSelectingMode(actor: ConnectionSrv.ConnectionSrvActor, down
   }
 
   def handleRq(tcpUtilState: ActorStateTcpUtil.State, rq: SocksOperation.SocksOperationRq): Receive = {
-    log.info("Client talks SOCKSv{} and enquires the following operation: {}", rq.version, rq)
+    log.debug("Client talks SOCKSv{} and enquires the following operation: {}", rq.version, rq)
 
     rq.commandParsed match {
       case Some(SocksOperationRq.TcpConnect(address)) =>
@@ -45,7 +45,7 @@ final case class WhenSelectingMode(actor: ConnectionSrv.ConnectionSrvActor, down
   }
 
   def handleRqDecodeErr(tcpUtilState: ActorStateTcpUtil.State, decodeError: scodec.Err): Receive = {
-    log.info("Failed to decode PDU. Shutting down with no response.")
+    log.debug("Failed to decode PDU. Shutting down with no response.")
 
     context stop self
     stdReceive.discard

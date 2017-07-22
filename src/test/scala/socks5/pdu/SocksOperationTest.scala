@@ -13,15 +13,15 @@ class SocksOperationTest extends FlatSpec with Matchers {
   val rsCodec = SocksOperation.encoding.socksOperationRsCodec
 
   val requestsIn = Seq(
-    SocksOperationRq(5, 1, AddressCoproduct(Address.Type3("example.com".getBytes(charset).toVector)), 80),
-    SocksOperationRq(5, 2, AddressCoproduct(Address.Type1(1,2,3,4)), 80),
-    SocksOperationRq(5, 3, AddressCoproduct(Address.Type4(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16)), 80)
+    SocksOperationRq(1, AddressCoproduct(Address.Type3("localhost".getBytes(charset).toVector)), 80),
+    SocksOperationRq(2, AddressCoproduct(Address.Type1(1,2,3,4)), 80),
+    SocksOperationRq(3, AddressCoproduct(Address.Type4(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16)), 80)
   )
 
   val responsesIn = Seq(
-    SocksOperationRs(5, 1, AddressCoproduct(Address.Type3("example.com".getBytes(charset).toVector)), 80),
-    SocksOperationRs(5, 2, AddressCoproduct(Address.Type1(1,2,3,4)), 80),
-    SocksOperationRs(5, 3, AddressCoproduct(Address.Type4(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16)), 80)
+    SocksOperationRs(1, AddressCoproduct(Address.Type3("localhost".getBytes(charset).toVector)), 80),
+    SocksOperationRs(2, AddressCoproduct(Address.Type1(1,2,3,4)), 80),
+    SocksOperationRs(3, AddressCoproduct(Address.Type4(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16)), 80)
   )
 
   "requests" should "encode and decode" in {

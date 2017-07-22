@@ -24,17 +24,17 @@ final case class WhenAuthenticating(actor: ConnectionSrv.ConnectionSrvActor, dow
 
 
   def handleRq(tcpUtilState: ActorStateTcpUtil.State, rq: AuthMethodSelection.AuthMethodSelectionRq): Receive = {
-    log.info("Client talks SOCKSv{} and supports the following auth-methods: [{}]", rq.version, rq.methods.mkString(","))
+    log.debug("Client talks SOCKSv{} and supports the following auth-methods: [{}]", rq.version, rq.methods.mkString(","))
     val authMethodIdChosen = chooseAuthMethod(rq)
-    log.info("Auth method chosen: {}", authMethodIdChosen)
-    val response = AuthMethodSelectionRs(rq.version, authMethodIdChosen)
+    log.debug("Auth method chosen: {}", authMethodIdChosen)
+    val response = AuthMethodSelectionRs(authMethodIdChosen)
 
     tcpUtil.write(downstreamTcp, authMethodSelectionRsCodec, response)
     WhenSelectingMode(actor, downstreamTcp).receive(tcpUtilState)
   }
 
   def handleRqDecodeErr(tcpUtilState: ActorStateTcpUtil.State, decodeError: scodec.Err): Receive = {
-    log.info("Failed to decode PDU. Shutting down with no response.")
+    log.debug("Failed to decode PDU. Shutting down with no response.")
 
     context stop self
     stdReceive.discard
@@ -47,7 +47,7 @@ final case class WhenAuthenticating(actor: ConnectionSrv.ConnectionSrvActor, dow
 
 
   def receive(): Receive = {
-    log.info("initalizing...")
+    log.debug("initalizing...")
     downstreamTcp ! Tcp.Register(self)
 
     whenExpectingRq(ActorStateTcpUtil.State.empty)
