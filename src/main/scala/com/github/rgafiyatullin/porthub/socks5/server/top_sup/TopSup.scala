@@ -7,6 +7,7 @@ import com.github.rgafiyatullin.porthub.socks5.server.connection_sup.ConnectionS
 import com.github.rgafiyatullin.porthub.socks5.server.listener_srv.ListenerSrv
 import akka.actor.Status
 import com.github.rgafiyatullin.porthub.socks5.server.Config
+import com.github.rgafiyatullin.porthub.socks5.server.authentication_srv.AuthenticationSrv
 
 import scala.concurrent.Future
 
@@ -16,6 +17,7 @@ object TopSup {
   object api {
     case object GetListenerSrv
     case object GetConnectionSup
+    case object GetAuthenticationSrv
   }
 
   def create(args: Args)(implicit arf: ActorRefFactory): TopSup =
@@ -23,7 +25,8 @@ object TopSup {
 
   private final case class State(
     connectionSup: ConnectionSup,
-    listenerSrv: ListenerSrv)
+    listenerSrv: ListenerSrv,
+    authenticationSrv: AuthenticationSrv)
 
   class TopSupActor(args: Args)
     extends Actor
@@ -36,10 +39,11 @@ object TopSup {
 
     def initialize(): Receive = {
       log.info("initializing...")
-      val connectionSup = ConnectionSup.create(ConnectionSup.Args(args.config))
+      val authenticationSrv = AuthenticationSrv.create(AuthenticationSrv.Args(args.config.authentication))
+      val connectionSup = ConnectionSup.create(ConnectionSup.Args(args.config, authenticationSrv))
       val listenerSrv = ListenerSrv.create(ListenerSrv.Args(args.config, connectionSup))
 
-      val state0 = State(connectionSup, listenerSrv)
+      val state0 = State(connectionSup, listenerSrv, authenticationSrv)
       log.info("initialized")
       whenReady(state0)
     }
@@ -47,6 +51,7 @@ object TopSup {
     def whenReady(state: State): Receive =
       handleGetListenerSrv(state) orElse
         handleGetConnectionSup(state) orElse
+        handleGetAuthenticationSrv(state) orElse
         stdReceive.discard
 
     def handleGetListenerSrv(state: State): Receive = {
@@ -57,6 +62,11 @@ object TopSup {
     def handleGetConnectionSup(state: State): Receive = {
       case api.GetConnectionSup =>
         sender() ! Status.Success(state.connectionSup)
+    }
+
+    def handleGetAuthenticationSrv(state: State): Receive = {
+      case api.GetAuthenticationSrv =>
+        sender() ! Status.Success(state.authenticationSrv)
     }
   }
 }
@@ -69,4 +79,7 @@ final case class TopSup(actorRef: ActorRef) {
 
   def getListenerSrv()(implicit timeout: Timeout): Future[ListenerSrv] =
     actorRef.ask(TopSup.api.GetListenerSrv).mapTo[ListenerSrv]
+
+  def getAuthenticationSrv()(implicit timeout: Timeout): Future[AuthenticationSrv] =
+    actorRef.ask(TopSup.api.GetAuthenticationSrv).mapTo[AuthenticationSrv]
 }

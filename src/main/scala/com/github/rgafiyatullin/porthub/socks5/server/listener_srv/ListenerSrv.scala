@@ -27,15 +27,15 @@ object ListenerSrv {
       with ActorLogging
   {
     implicit val executionContext = context.dispatcher
-    implicit val defaultOperationTimeout = args.config.defaultOperationTImeout
+    implicit val defaultOperationTimeout = args.config.defaultOperationTimeout
 
     override def receive =
       initialize()
 
 
     def initialize(): Receive = {
-      IO(Tcp)(context.system) ! Tcp.Bind(self, new InetSocketAddress(args.config.bindPort))
-      context.system.scheduler.scheduleOnce(args.config.bindTimeout, self, api.BindTimeout)
+      IO(Tcp)(context.system) ! Tcp.Bind(self, new InetSocketAddress(args.config.bind.port))
+      context.system.scheduler.scheduleOnce(args.config.bind.timeout, self, api.BindTimeout)
       whenBinding()
     }
 

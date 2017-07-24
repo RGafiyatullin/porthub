@@ -4,12 +4,13 @@ import akka.actor.{Actor, ActorLogging, ActorRef, ActorRefFactory, Props, Status
 import akka.util.Timeout
 import com.github.rgafiyatullin.owl_akka_goodies.actor_future.{ActorFuture, ActorStdReceive}
 import com.github.rgafiyatullin.porthub.socks5.server.Config
+import com.github.rgafiyatullin.porthub.socks5.server.authentication_srv.AuthenticationSrv
 import com.github.rgafiyatullin.porthub.socks5.server.connection_srv.ConnectionSrv
 
 import scala.concurrent.Future
 
 object ConnectionSup {
-  final case class Args(config: Config)
+  final case class Args(config: Config, authenticationSrv: AuthenticationSrv)
 
   def create(args: Args)(implicit arf: ActorRefFactory): ConnectionSup =
     ConnectionSup(arf.actorOf(Props(classOf[ConnectionSupActor], args)))
@@ -44,7 +45,8 @@ object ConnectionSup {
 
     def handleStartConnectionSrv(state: State): Receive = {
       case api.StartConnectionSrv(tcpConnection) =>
-        val connectionSrv = ConnectionSrv.create(ConnectionSrv.Args(tcpConnection))
+        val connectionSrv = ConnectionSrv.create(
+          ConnectionSrv.Args(tcpConnection, args.authenticationSrv, args.config.defaultOperationTimeout))
         sender() ! Status.Success(connectionSrv)
         context become whenReady(state)
     }
