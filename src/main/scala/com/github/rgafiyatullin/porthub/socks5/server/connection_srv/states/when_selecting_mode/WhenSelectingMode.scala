@@ -1,12 +1,12 @@
-package com.github.rgafiyatullin.porthub.socks5.server.connection_sup.states.when_selecting_mode
+package com.github.rgafiyatullin.porthub.socks5.server.connection_srv.states.when_selecting_mode
 
 import akka.actor.Actor.Receive
 import akka.actor.ActorRef
 import com.github.rgafiyatullin.porthub.socks5.pdu.SocksOperation
 import com.github.rgafiyatullin.porthub.socks5.pdu.SocksOperation.{SocksOperationRq, SocksOperationRs}
 import com.github.rgafiyatullin.porthub.socks5.server.connection_srv.ConnectionSrv
-import com.github.rgafiyatullin.porthub.socks5.server.connection_sup.states.when_mode_connect.WhenModeConnect
-import com.github.rgafiyatullin.porthub.socks5.server.connection_sup.states.{ActorState, ActorStateTcpUtil}
+import com.github.rgafiyatullin.porthub.socks5.server.connection_srv.states.when_mode_connect.WhenModeConnect
+import com.github.rgafiyatullin.porthub.socks5.server.connection_srv.states.{ActorState, ActorStateTcpUtil}
 
 final case class WhenSelectingMode(actor: ConnectionSrv.ConnectionSrvActor, downstreamTcp: ActorRef)
   extends ActorState[ConnectionSrv.ConnectionSrvActor]

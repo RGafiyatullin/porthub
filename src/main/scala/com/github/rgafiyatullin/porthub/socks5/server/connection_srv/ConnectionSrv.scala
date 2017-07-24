@@ -8,7 +8,7 @@ import com.github.rgafiyatullin.owl_akka_goodies.actor_future.{ActorFuture, Acto
 import com.github.rgafiyatullin.porthub.socks5.pdu.{AuthMethodSelection, SocksOperation}
 import com.github.rgafiyatullin.porthub.socks5.pdu.AuthMethodSelection.{AuthMethodSelectionRq, AuthMethodSelectionRs}
 import com.github.rgafiyatullin.porthub.socks5.pdu.SocksOperation.{SocksOperationRq, SocksOperationRs}
-import com.github.rgafiyatullin.porthub.socks5.server.connection_sup.states.when_authenticating.WhenAuthenticating
+import com.github.rgafiyatullin.porthub.socks5.server.connection_srv.states.when_authenticating.WhenAuthenticating
 import scodec.{Attempt, DecodeResult}
 import scodec.bits.BitVector
 import scodec.interop.akka._

@@ -1,11 +1,11 @@
-package com.github.rgafiyatullin.porthub.socks5.server.connection_sup.states.when_mode_connect
+package com.github.rgafiyatullin.porthub.socks5.server.connection_srv.states.when_mode_connect
 
 import akka.actor.Actor.Receive
 import akka.actor.ActorRef
 import akka.io.{IO, Tcp}
 import com.github.rgafiyatullin.porthub.socks5.pdu.SocksOperation
 import com.github.rgafiyatullin.porthub.socks5.server.connection_srv.ConnectionSrv
-import com.github.rgafiyatullin.porthub.socks5.server.connection_sup.states.{ActorState, ActorStateTcpUtil}
+import com.github.rgafiyatullin.porthub.socks5.server.connection_srv.states.{ActorState, ActorStateTcpUtil}
 import scodec.interop.akka._
 
 object WhenModeConnect {

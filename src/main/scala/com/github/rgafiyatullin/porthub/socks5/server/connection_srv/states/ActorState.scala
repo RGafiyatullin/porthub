@@ -1,4 +1,4 @@
-package com.github.rgafiyatullin.porthub.socks5.server.connection_sup.states
+package com.github.rgafiyatullin.porthub.socks5.server.connection_srv.states
 
 import akka.actor.Actor.Receive
 import akka.actor.{Actor, ActorContext, ActorRef}
