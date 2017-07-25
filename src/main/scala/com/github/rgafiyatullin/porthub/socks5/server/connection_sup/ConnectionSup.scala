@@ -1,23 +1,31 @@
 package com.github.rgafiyatullin.porthub.socks5.server.connection_sup
 
+import java.net.InetSocketAddress
+
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorRefFactory, Props, Status, SupervisorStrategy}
 import akka.util.Timeout
 import com.github.rgafiyatullin.owl_akka_goodies.actor_future.{ActorFuture, ActorStdReceive}
 import com.github.rgafiyatullin.porthub.socks5.server.Config
+import com.github.rgafiyatullin.porthub.socks5.server.audit_srv.AuditSrv
 import com.github.rgafiyatullin.porthub.socks5.server.authentication_srv.AuthenticationSrv
 import com.github.rgafiyatullin.porthub.socks5.server.connection_srv.ConnectionSrv
 
 import scala.concurrent.Future
 
 object ConnectionSup {
-  final case class Args(config: Config, authenticationSrv: AuthenticationSrv)
+  final case class Args(
+    config: Config,
+    authenticationSrv: AuthenticationSrv,
+    auditSrv: AuditSrv)
 
   def create(args: Args)(implicit arf: ActorRefFactory): ConnectionSup =
-    ConnectionSup(arf.actorOf(Props(classOf[ConnectionSupActor], args)))
+    ConnectionSup(arf.actorOf(Props(classOf[ConnectionSupActor], args), "connection-sup"))
 
 
   object api {
-    final case class StartConnectionSrv(tcpConnection: ActorRef)
+    final case class StartConnectionSrv(
+      tcpConnection: ActorRef,
+      remoteAddress: InetSocketAddress)
   }
 
   private final case class State()
@@ -44,9 +52,9 @@ object ConnectionSup {
 
 
     def handleStartConnectionSrv(state: State): Receive = {
-      case api.StartConnectionSrv(tcpConnection) =>
+      case api.StartConnectionSrv(tcpConnection, remoteAddress) =>
         val connectionSrv = ConnectionSrv.create(
-          ConnectionSrv.Args(tcpConnection, args.authenticationSrv, args.config.defaultOperationTimeout))
+          ConnectionSrv.Args(tcpConnection, remoteAddress, args.authenticationSrv, args.auditSrv, args.config.defaultOperationTimeout))
         sender() ! Status.Success(connectionSrv)
         context become whenReady(state)
     }
@@ -56,6 +64,6 @@ object ConnectionSup {
 final case class ConnectionSup(actorRef: ActorRef) {
   import akka.pattern.ask
 
-  def startConnectionSrv(tcpConnection: ActorRef)(implicit timeout: Timeout): Future[ConnectionSrv] =
-    actorRef.ask(ConnectionSup.api.StartConnectionSrv(tcpConnection)).mapTo[ConnectionSrv]
+  def startConnectionSrv(tcpConnection: ActorRef, remoteAddress: InetSocketAddress)(implicit timeout: Timeout): Future[ConnectionSrv] =
+    actorRef.ask(ConnectionSup.api.StartConnectionSrv(tcpConnection, remoteAddress)).mapTo[ConnectionSrv]
 }

@@ -1,17 +1,18 @@
 package com.github.rgafiyatullin.porthub.socks5.server.connection_srv.states.when_selecting_mode
 
 import akka.actor.Actor.Receive
-import akka.actor.ActorRef
 import com.github.rgafiyatullin.porthub.socks5.pdu.SocksOperation
 import com.github.rgafiyatullin.porthub.socks5.pdu.SocksOperation.{SocksOperationRq, SocksOperationRs}
 import com.github.rgafiyatullin.porthub.socks5.server.connection_srv.ConnectionSrv
+import com.github.rgafiyatullin.porthub.socks5.security.authentication.Identity
 import com.github.rgafiyatullin.porthub.socks5.server.connection_srv.states.when_mode_connect.WhenModeConnect
 import com.github.rgafiyatullin.porthub.socks5.server.connection_srv.states.{ActorState, ActorStateTcpUtil}
 
-final case class WhenSelectingMode(actor: ConnectionSrv.ConnectionSrvActor, downstreamTcp: ActorRef)
+final case class WhenSelectingMode(state: ConnectionSrv.State, identity: Identity)
   extends ActorState[ConnectionSrv.ConnectionSrvActor]
     with ActorStateTcpUtil[ConnectionSrv.ConnectionSrvActor]
 {
+  val actor = state.actor
   val stdReceive = actor.stdReceive
   val log = actor.log
 
@@ -20,18 +21,18 @@ final case class WhenSelectingMode(actor: ConnectionSrv.ConnectionSrvActor, down
 
   def handleRqCommandNotSupported(rq: SocksOperation.SocksOperationRq): Receive = {
     val response = SocksOperationRs(7.toByte /* Command not supported */, rq.address, rq.port)
-    tcpUtil.write(downstreamTcp, socksOperationRsCodec, response)
+    tcpUtil.write(state.downstreamTcp, socksOperationRsCodec, response)
 
     context stop self
     stdReceive.discard
   }
 
   def handleRq(tcpUtilState: ActorStateTcpUtil.State, rq: SocksOperation.SocksOperationRq): Receive = {
-    log.debug("Client talks SOCKSv{} and enquires the following operation: {}", rq.version, rq)
+    log.debug("Client ({}) talks SOCKSv{} and enquires the following operation: {}", identity, rq.version, rq)
 
     rq.commandParsed match {
       case Some(SocksOperationRq.TcpConnect(address)) =>
-        WhenModeConnect(actor, downstreamTcp, rq).receive(tcpUtilState)
+        WhenModeConnect(state, identity, rq).receive(tcpUtilState)
 
       case Some(SocksOperationRq.TcpBind(address)) =>
         handleRqCommandNotSupported(rq)
@@ -52,8 +53,12 @@ final case class WhenSelectingMode(actor: ConnectionSrv.ConnectionSrvActor, down
   }
 
   def whenExpectingRq(tcpUtilState: ActorStateTcpUtil.State): Receive =
-    tcpUtil.handleTcpReceived(downstreamTcp, socksOperationRqCodec, tcpUtilState)(whenExpectingRq)(handleRq)(handleRqDecodeErr) orElse
-      stdReceive.discard
+    tcpUtil.handleTcpReceived(
+        state.downstreamTcp,
+        socksOperationRqCodec,
+        tcpUtilState)(whenExpectingRq
+      )(handleRq)(handleRqDecodeErr) orElse
+        stdReceive.discard
 
   def receive(tcpUtilState: ActorStateTcpUtil.State): Receive =
     whenExpectingRq(tcpUtilState)

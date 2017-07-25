@@ -8,6 +8,7 @@ import akka.util.Timeout
 import com.github.rgafiyatullin.porthub.socks5.pdu.AuthMethodUserPasswordPlainText
 import com.github.rgafiyatullin.porthub.socks5.server.authentication_srv.AuthenticationSrv
 import com.github.rgafiyatullin.porthub.socks5.server.connection_srv.ConnectionSrv
+import com.github.rgafiyatullin.porthub.socks5.security.authentication.Identity
 import com.github.rgafiyatullin.porthub.socks5.server.connection_srv.states.{ActorState, ActorStateTcpUtil}
 import com.github.rgafiyatullin.porthub.socks5.server.connection_srv.states.when_authenticating.WhenAuthenticating.{Authenticator, AuthenticatorProvider}
 
@@ -15,27 +16,22 @@ import scala.concurrent.Future
 import scala.util.Success
 
 object UsernamePasswordAuthenticator {
-  final case class Provider(authenticationSrv: AuthenticationSrv, operationTimeout: Timeout) extends AuthenticatorProvider {
+  final case class Provider(state: ConnectionSrv.State) extends AuthenticatorProvider {
     override val authMethodId: Byte = 2
 
-    override def create(
-      actor: ConnectionSrv.ConnectionSrvActor,
-      downstreamTcp: ActorRef,
-      onSuccess: Authenticator.OnSuccess): Authenticator =
-        UsernamePasswordAuthenticator(authenticationSrv, operationTimeout, actor, downstreamTcp, onSuccess)
+    override def create(onSuccess: Authenticator.OnSuccess): Authenticator =
+        UsernamePasswordAuthenticator(state, onSuccess)
   }
 }
 
 final case class UsernamePasswordAuthenticator(
-    authenticationSrv: AuthenticationSrv,
-    operationTimeout: Timeout,
-    actor: ConnectionSrv.ConnectionSrvActor,
-    downstreamTcp: ActorRef,
+    state: ConnectionSrv.State,
     onSuccess: Authenticator.OnSuccess)
   extends Authenticator
     with ActorState[ConnectionSrv.ConnectionSrvActor]
     with ActorStateTcpUtil[ConnectionSrv.ConnectionSrvActor]
 {
+  val actor = state.actor
   val charset = Charset.forName("utf8")
   val stdReceive = actor.stdReceive
 
@@ -58,27 +54,27 @@ final case class UsernamePasswordAuthenticator(
     val password = new String(rq.password.toArray, charset)
 
     actor.future.handle(checkUserPasswordPair(username, password)) {
-      case Success(false) =>
+      case Success(None) =>
         val response = AuthMethodUserPasswordPlainText.AuthMethodUserPasswordPlainTextRs(1)
-        tcpUtil.write(downstreamTcp, rsCodec, response)
+        tcpUtil.write(state.downstreamTcp, rsCodec, response)
         context stop self
         stdReceive.discard
 
-      case Success(true) =>
+      case Success(Some(identity)) =>
         val response = AuthMethodUserPasswordPlainText.AuthMethodUserPasswordPlainTextRs(0)
-        tcpUtil.write(downstreamTcp, rsCodec, response)
-        onSuccess(actor, downstreamTcp, tcpUtilState)
+        tcpUtil.write(state.downstreamTcp, rsCodec, response)
+        onSuccess(state, identity, tcpUtilState)
     }
   }
 
 
-  def checkUserPasswordPair(username: String, password: String): Future[Boolean] =
-    authenticationSrv.usernamePassword.check(username, password)(operationTimeout)
+  def checkUserPasswordPair(username: String, password: String): Future[Option[Identity]] =
+    state.authenticationSrv.usernamePassword.authenticate(state.downstreamSocketAddress, username, password)(state.operationTimeout)
 
 
 
   def handleRq(tcpUtilState: ActorStateTcpUtil.State): Receive =
-    tcpUtil.handleTcpReceived(downstreamTcp, rqCodec, tcpUtilState)(whenExpectingRq)(handlePDU)(handleDecodeError)
+    tcpUtil.handleTcpReceived(state.downstreamTcp, rqCodec, tcpUtilState)(whenExpectingRq)(handlePDU)(handleDecodeError)
 
   def whenExpectingRq(tcpUtilState: ActorStateTcpUtil.State): Receive =
     handleRq(tcpUtilState) orElse

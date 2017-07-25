@@ -12,7 +12,7 @@ object ListenerSrv {
   final case class Args(config: Config, connectionSup: ConnectionSup)
 
   def create(args: Args)(implicit arf: ActorRefFactory): ListenerSrv =
-    ListenerSrv(arf.actorOf(Props(classOf[ListenerSrvActor], args)))
+    ListenerSrv(arf.actorOf(Props(classOf[ListenerSrvActor], args), "listener-srv"))
 
   object api {
     case object BindTimeout extends Exception
@@ -63,7 +63,7 @@ object ListenerSrv {
       case Tcp.Connected(remoteAddress, localAddress) =>
         val tcpConnection = sender()
         val _ = for {
-          connectionSrv <- args.connectionSup.startConnectionSrv(tcpConnection)
+          connectionSrv <- args.connectionSup.startConnectionSrv(tcpConnection, remoteAddress)
         }
           yield ()
 

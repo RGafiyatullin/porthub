@@ -1,0 +1,18 @@
+
+FROM java:8u102-jre
+MAINTAINER Roman Gafiyatullin <r.gafiyatullin@me.com>
+
+RUN ["mkdir", "-p", "/opt"]
+COPY target/universal/stage /opt/porthub
+
+ENV AKKA_LOG_LEVEL=warning
+ENV PORTHUB_DEFAULT_OPERATION_TIMEOUT=5s
+ENV PORTHUB_BIND_PORT=1080
+ENV PORTHUB_BIND_TIMEOUT=5s
+ENV PORTHUB_AUTHENTICATION_ANONYMOUS_ENABLED=off
+ENV PORTHUB_AUTHENTICATION_USERPASSWORD_ENABLED=off
+ENV PORTHUB_AUTHENTICATION_USERPASSWORD_FILE="/user-password-identity.tsv"
+
+ENTRYPOINT "/opt/porthub/bin/porthub"
+
+

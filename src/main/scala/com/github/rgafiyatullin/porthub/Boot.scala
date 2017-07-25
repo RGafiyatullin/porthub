@@ -21,8 +21,15 @@ object Boot extends App {
     else
       None
 
+  def configAuthenticationAnonymous(config: Config): Option[ServerConfig.Authentication.Anonymous] =
+    if (config.getBoolean("porthub.authentication.anonymous.enabled"))
+      Some(ServerConfig.Authentication.Anonymous())
+    else
+      None
+
   def configAuthentication(config: Config): ServerConfig.Authentication =
     ServerConfig.Authentication(
+      anonymousOption = configAuthenticationAnonymous(config),
       usernamePasswordOption = configAuthenticationUsernamePassword(config)
     )
 

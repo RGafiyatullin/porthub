@@ -7,11 +7,7 @@ import akka.event.LoggingReceive
 trait ActorState[ActorType <: Actor] {
   val actor: ActorType
 
-  implicit val context: ActorContext = actor.context
-  implicit val self: ActorRef = context.self
+  implicit lazy val context: ActorContext = actor.context
+  implicit lazy val self: ActorRef = context.self
   val sender = context.sender _
-
-//  object actorStateContext {
-//    def become(behaviour: Receive): Unit = context become LoggingReceive(behaviour)(context)
-//  }
 }

@@ -7,6 +7,7 @@ import com.github.rgafiyatullin.porthub.socks5.server.connection_sup.ConnectionS
 import com.github.rgafiyatullin.porthub.socks5.server.listener_srv.ListenerSrv
 import akka.actor.Status
 import com.github.rgafiyatullin.porthub.socks5.server.Config
+import com.github.rgafiyatullin.porthub.socks5.server.audit_srv.AuditSrv
 import com.github.rgafiyatullin.porthub.socks5.server.authentication_srv.AuthenticationSrv
 
 import scala.concurrent.Future
@@ -18,15 +19,17 @@ object TopSup {
     case object GetListenerSrv
     case object GetConnectionSup
     case object GetAuthenticationSrv
+    case object GetAuditSrv
   }
 
   def create(args: Args)(implicit arf: ActorRefFactory): TopSup =
-    TopSup(arf.actorOf(Props(classOf[TopSupActor], args)))
+    TopSup(arf.actorOf(Props(classOf[TopSupActor], args), "top-sup"))
 
   private final case class State(
     connectionSup: ConnectionSup,
     listenerSrv: ListenerSrv,
-    authenticationSrv: AuthenticationSrv)
+    authenticationSrv: AuthenticationSrv,
+    auditSrv: AuditSrv)
 
   class TopSupActor(args: Args)
     extends Actor
@@ -39,11 +42,12 @@ object TopSup {
 
     def initialize(): Receive = {
       log.info("initializing...")
-      val authenticationSrv = AuthenticationSrv.create(AuthenticationSrv.Args(args.config.authentication))
-      val connectionSup = ConnectionSup.create(ConnectionSup.Args(args.config, authenticationSrv))
+      val auditSrv = AuditSrv.create(AuditSrv.Args(args.config.audit))
+      val authenticationSrv = AuthenticationSrv.create(AuthenticationSrv.Args(args.config.authentication, auditSrv))
+      val connectionSup = ConnectionSup.create(ConnectionSup.Args(args.config, authenticationSrv, auditSrv))
       val listenerSrv = ListenerSrv.create(ListenerSrv.Args(args.config, connectionSup))
 
-      val state0 = State(connectionSup, listenerSrv, authenticationSrv)
+      val state0 = State(connectionSup, listenerSrv, authenticationSrv, auditSrv)
       log.info("initialized")
       whenReady(state0)
     }
@@ -52,6 +56,7 @@ object TopSup {
       handleGetListenerSrv(state) orElse
         handleGetConnectionSup(state) orElse
         handleGetAuthenticationSrv(state) orElse
+        handleGetAuditSrv(state) orElse
         stdReceive.discard
 
     def handleGetListenerSrv(state: State): Receive = {
@@ -68,10 +73,16 @@ object TopSup {
       case api.GetAuthenticationSrv =>
         sender() ! Status.Success(state.authenticationSrv)
     }
+
+    def handleGetAuditSrv(state: State): Receive = {
+      case api.GetAuditSrv =>
+        sender() ! Status.Success(state.auditSrv)
+    }
   }
 }
 
 final case class TopSup(actorRef: ActorRef) {
+
   import akka.pattern.ask
 
   def getConnectionSup()(implicit timeout: Timeout): Future[ConnectionSup] =
@@ -82,4 +93,8 @@ final case class TopSup(actorRef: ActorRef) {
 
   def getAuthenticationSrv()(implicit timeout: Timeout): Future[AuthenticationSrv] =
     actorRef.ask(TopSup.api.GetAuthenticationSrv).mapTo[AuthenticationSrv]
+
+  def getAuditSrv()(implicit timeout: Timeout): Future[AuditSrv] =
+    actorRef.ask(TopSup.api.GetAuditSrv).mapTo[AuditSrv]
 }
+
